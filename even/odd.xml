@@ -1,0 +1,155 @@
+<xml xmlns="http://www.w3.org/1999/xhtml">
+  <variables>
+    <variable id="stake">stake</variable>
+    <variable id="base_stake">base_stake</variable>
+    <variable id="martingale">martingale</variable>
+    <variable id="odd_count">odd_count</variable>
+  </variables>
+
+  <block type="trade" x="0" y="0">
+    <field name="SYMBOL_LIST">R_100</field>
+    <field name="TRADETYPECAT_LIST">digits</field>
+    <field name="TRADETYPE_LIST">overunder</field>
+    <field name="TYPE_LIST">DIGITEVEN</field>
+
+    <statement name="INITIALIZATION">
+      <block type="variables_set">
+        <field name="VAR">base_stake</field>
+        <value name="VALUE"><block type="math_number"><field name="NUM">1</field></block></value>
+        <next>
+          <block type="variables_set">
+            <field name="VAR">stake</field>
+            <value name="VALUE"><block type="math_number"><field name="NUM">1</field></block></value>
+            <next>
+              <block type="variables_set">
+                <field name="VAR">martingale</field>
+                <value name="VALUE"><block type="math_number"><field name="NUM">2</field></block></value>
+                <next>
+                  <block type="variables_set">
+                    <field name="VAR">odd_count</field>
+                    <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="tradeOptions">
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION"><block type="math_number"><field name="NUM">1</field></block></value>
+        <value name="AMOUNT"><block type="variables_get"><field name="VAR">stake</field></block></value>
+      </block>
+    </statement>
+  </block>
+
+  <!-- STRATEGY -->
+  <block type="before_purchase" x="0" y="300">
+    <statement name="BEFOREPURCHASE_STACK">
+      
+      <!-- Check last digit -->
+      <block type="controls_if">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_compare">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="math_modulo">
+                <value name="DIVIDEND"><block type="last_digit"/></value>
+                <value name="DIVISOR"><block type="math_number"><field name="NUM">2</field></block></value>
+              </block>
+            </value>
+            <value name="B"><block type="math_number"><field name="NUM">1</field></block></value>
+          </block>
+        </value>
+
+        <!-- IF ODD -->
+        <statement name="DO0">
+          <block type="math_change">
+            <field name="VAR">odd_count</field>
+            <value name="DELTA"><block type="math_number"><field name="NUM">1</field></block></value>
+          </block>
+        </statement>
+
+        <!-- ELSE RESET -->
+        <statement name="ELSE">
+          <block type="variables_set">
+            <field name="VAR">odd_count</field>
+            <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+          </block>
+        </statement>
+      </block>
+
+      <!-- TRADE WHEN 3 ODDS -->
+      <block type="controls_if">
+        <value name="IF0">
+          <block type="logic_compare">
+            <field name="OP">EQ</field>
+            <value name="A"><block type="variables_get"><field name="VAR">odd_count</field></block></value>
+            <value name="B"><block type="math_number"><field name="NUM">3</field></block></value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="purchase">
+            <field name="PURCHASE_LIST">DIGITEVEN</field>
+            <next>
+              <block type="variables_set">
+                <field name="VAR">odd_count</field>
+                <value name="VALUE"><block type="math_number"><field name="NUM">0</field></block></value>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+
+    </statement>
+  </block>
+
+  <!-- AFTER TRADE -->
+  <block type="after_purchase" x="0" y="600">
+    <statement name="AFTERPURCHASE_STACK">
+
+      <block type="controls_if">
+        <mutation else="1"></mutation>
+
+        <!-- WIN -->
+        <value name="IF0">
+          <block type="contract_check_result">
+            <field name="CHECK_RESULT">win</field>
+          </block>
+        </value>
+
+        <statement name="DO0">
+          <block type="variables_set">
+            <field name="VAR">stake</field>
+            <value name="VALUE"><block type="variables_get"><field name="VAR">base_stake</field></block></value>
+          </block>
+        </statement>
+
+        <!-- LOSS -->
+        <statement name="ELSE">
+          <block type="variables_set">
+            <field name="VAR">stake</field>
+            <value name="VALUE">
+              <block type="math_arithmetic">
+                <field name="OP">MULTIPLY</field>
+                <value name="A"><block type="variables_get"><field name="VAR">stake</field></block></value>
+                <value name="B"><block type="variables_get"><field name="VAR">martingale</field></block></value>
+              </block>
+            </value>
+          </block>
+        </statement>
+
+      </block>
+
+      <next>
+        <block type="trade_again"></block>
+      </next>
+
+    </statement>
+  </block>
+
+</xml>
